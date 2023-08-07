@@ -14,7 +14,7 @@ _export PATH_
 
 **Running the code**
 
-All scripts must be run from the terminal within the folder that contains 3 files: **(1)** fMRI data (one run) from functional localizer task; **(2)** anatomical data; **(3)** Text file with event information in 3-column format for performing GLM in FSL ("EV" file) - required only for rt_fmri_localizer_proc
+All scripts must be run from the terminal within the folder that contains 3 files: **(1)** fMRI data (one run) from functional localizer task; **(2)** anatomical data; **(3)** Text file with event information in 3-column format for performing GLM in FSL ("EV" file; required only for rtfmri_localizer_proc)
 
 **rtfmri_localizer_proc**: Main function that computes ROIs using functional localizer task data. Requires 3 arguments: **(1)** subject name; **(2)** name of fMRI file; **(3)** name of T1 (anatomical) file. Outputs an "OpenNFT" folder within the path where to command was run.
 
