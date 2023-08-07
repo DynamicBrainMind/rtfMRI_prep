@@ -4,9 +4,8 @@ These scripts are for processing functional localizer data immediately after dat
 **Setup**
 1. After cloning this repository, add the path to your bash startup script (.bash_profile on Mac), e.g. by adding these lines (using your own path) to the script:
 
-_PATH="/Users/ak4379/Documents/scripts/rtfMRI_prep:${PATH}"
-
-export PATH_
+PATH="/Users/ak4379/Documents/scripts/rtfMRI_prep:${PATH}"
+export PATH
 
 2. Make sure that all of the scripts are executable. For example, go to the rtfMRI_prep path in terminal and type "_chmod u+x *_"
 
