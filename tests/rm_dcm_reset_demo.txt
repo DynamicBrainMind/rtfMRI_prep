@@ -1,0 +1,1 @@
+rm -f /Users/ak4379/Documents/OpenNFT/OpenNFT_DemoData_gradCPT/NF_Run_1/*

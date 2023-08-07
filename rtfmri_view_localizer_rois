@@ -1,0 +1,3 @@
+#! /bin/bash -f
+
+fsleyes example_func ROIs/PMC -cm blue-lightblue -a 25 ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC -cm red-yellow -a 25 ROIs/daIC_ROI -cm red-yellow ROIs/WM_ROI -cm brain_colours_greengray

@@ -1,0 +1,3 @@
+#! /bin/bash -f
+
+fsleyes example_func ROIs/ROI2_PMC_sphere.nii -cm blue-lightblue ROIs/ROI1_daIC_sphere.nii -cm red-yellow ROIs/ROI3_WM.nii -cm brain_colours_greengray

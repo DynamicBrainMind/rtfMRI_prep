@@ -1,0 +1,136 @@
+#! /bin/bash -f
+
+# needs 3 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
+# must run this from within a folder that contains both of these files
+
+# Add path to this script to .bash_profile (on Mac)
+# e.g. add these two lines:
+# PATH="/Users/ak4379/Documents/rtfMRI:${PATH}"
+# export PATH
+
+usage() {
+    echo ""
+	echo "rtfmri_localizer_proc_noGLM <subject_name> <fMRI_nii_file> <anat_nii_file>"
+}
+
+# rtfMRI code path
+a=`which rtfmri_localizer_proc`
+rtfMRI_path=`echo "${a%/*}/"`
+
+# Inputs
+sub="$1"
+data="$2";
+anat="$3";
+
+if [[ $# -eq 0 ]] ; then
+	usage
+    exit 
+fi
+
+if [ -z "$1" ]; then
+  echo "No subject name entered as input 1"
+  exit
+fi
+
+if [ -z "$2" ]; then
+  echo "No fMRI data entered as input 1"
+  exit
+fi
+
+if [ -z "$3" ]; then
+  echo "No T1 data entered as input 2"
+  exit
+fi
+
+# settings
+start=$(date +%s)
+path=`pwd`
+
+# remove any previously created conflicting files
+rm -f example_func.nii anat_brain_funcaligned.nii
+
+# get # volumes
+volumes=`fslinfo ${data} | grep "^dim4" | awk '{print $2}'`
+echo "n volumes = ${volumes}"
+
+# extract middle fMRI volume (template)
+example_vol=`python -c "print ($volumes/2)"`
+fslroi ${data} example_func ${example_vol} 1 # extract middle func volume as template
+
+# brain extraction (skull removal)
+bet2 example_func mask -f 0.3 -n -m
+fslmaths example_func -mas mask_mask data_bet
+end=$(date +%s)
+echo "done BET; total elapsed time: $(($end-$start)) seconds"
+
+# register to T1 and standard space and make transforms
+bet2 ${anat} anat_brain # remove skull from T1 image
+flirt -in example_func -ref anat_brain -out example_func2highres -omat example_func2highres.mat -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear 
+convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat # make inverse transform
+end=$(date +%s)
+mkdir -p reg
+slices example_func2highres anat_brain -o reg/func2highres.gif # pop up visualization for func 2 struct registration quality
+echo "done registering func to struct; total elapsed time: $(($end-$start)) seconds"
+flirt -in anat_brain -ref ${rtfMRI_path}/rt-fMRI_ROIs/standard -out highres2standard -omat highres2standard.mat -cost corratio -dof 12 -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -interp trilinear 
+convert_xfm -inverse -omat standard2highres.mat highres2standard.mat # make inverse transform
+convert_xfm -omat example_func2standard.mat -concat highres2standard.mat example_func2highres.mat
+convert_xfm -inverse -omat standard2example_func.mat example_func2standard.mat
+slices highres2standard ${rtfMRI_path}/rt-fMRI_ROIs/standard reg/highres2standard.gif # pop up visualization for struct 2 standard registration quality (and save)
+flirt -ref example_func -in anat_brain -out anat_brain_funcaligned -applyxfm -init highres2example_func.mat -interp trilinear
+end=$(date +%s)
+echo "done registering to standard space and making transforms; total elapsed time: $(($end-$start)) seconds"
+
+# Make ROIs
+flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/daIC/right/k3/daIC_sphere.nii.gz -out daIC_sphere -applyxfm -init standard2example_func.mat -interp trilinear
+flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/PMC/PMC_sphere -out PMC_sphere -applyxfm -init standard2example_func.mat -interp trilinear
+fslmaths daIC_sphere -bin ROI1_daIC_sphere -odt int # convert to int for OpenNFT compatibility
+gunzip ROI1_daIC_sphere.nii.gz
+fslmaths PMC_sphere -bin ROI2_PMC_sphere -odt int # convert to int for OpenNFT compatibility
+gunzip ROI2_PMC_sphere.nii.gz
+# White matter ROI
+flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/WM/WM_sphere -out WM_ROI -applyxfm -init standard2example_func.mat -interp trilinear
+fslmaths WM_ROI -bin ROI3_WM -odt int
+gunzip ROI3_WM.nii.gz
+end=$(date +%s)
+echo "done making ROIs based on registration from standard space; total elapsed time: $(($end-$start)) seconds"
+
+# Prepare for OpenNFT
+mkdir -p OpenNFT
+mkdir -p OpenNFT/Run_1_src
+mkdir -p OpenNFT/Run_1
+mkdir -p OpenNFT/EPI_Template
+mkdir -p OpenNFT/T1
+mkdir -p OpenNFT/Data_1
+mkdir -p OpenNFT/ROIs
+mkdir -p OpenNFT/config
+cp -r ${rtfMRI_path}/Settings OpenNFT
+cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
+cp ROI1_daIC_sphere.nii OpenNFT/ROIs
+gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
+cp example_func.nii OpenNFT/EPI_Template
+cp anat_brain_funcaligned.nii OpenNFT/T1
+# .ini file setup
+cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
+sed -e "s/####SUBNAME####/${sub}/g" OpenNFT/config/temp1.ini > OpenNFT/config/temp2.ini
+sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp2.ini > OpenNFT/config/rtfmri_es.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini
+
+# set up "test" folder for simulation
+mkdir -p OpenNFT/tests
+cp ${rtfMRI_path}/tests/testRTexp.py OpenNFT/tests/temp.py
+test_path=${path}/OpenNFT
+sed -e "s+####TESTPATH####+${test_path}+g" OpenNFT/tests/temp.py > OpenNFT/tests/testRTexp.py
+rm -f OpenNFT/tests/temp.py
+
+# organize outputs
+mkdir -p ROIs
+rm -f data_bet.nii.gz
+mv daIC_sphere.nii.gz ROI1_daIC_sphere.nii ROIs
+mv PMC_sphere.nii.gz ROI2_PMC_sphere.nii ROIs
+mv WM_ROI.nii.gz ROI3_WM.nii ROIs
+mv highres2example_func.mat highres2standard.mat highres2standard.nii.gz standard2highres.mat reg
+mv example_func2highres.mat example_func2highres.nii.gz example_func2standard.mat standard2example_func.mat reg
+
+end=$(date +%s)
+end_mins=`python -c "print (($end-$start)/60 )"`
+echo "done preparing for OpenNFT: total elapsed time: $end_mins minutes"
