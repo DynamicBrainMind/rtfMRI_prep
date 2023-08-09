@@ -11,7 +11,7 @@
 usage() {
     echo ""
 	echo "rtfmri_localizer_proc <subject_name> <fMRI_nii_file> <anat_nii_file>"
-	echo "optional 4th argument: final # of voxels for ROIs"
+	echo "optional 4th argument: final # of voxels for ROIs (default=200)"
 }
 
 # rtfMRI code path
@@ -80,7 +80,7 @@ end=$(date +%s)
 echo "done BET; total elapsed time: $(($end-$start)) seconds"
 
 # register to T1 and standard space and make transforms
-bet2 ${anat} anat_brain # remove skull from T1 image
+bet ${anat} anat_brain -R # remove skull from T1 image
 example_vol=`python -c "print ($vols_retain/2)"`
 fslroi func_mcf_bet example_func ${example_vol} 1 # extract middle func volume as template
 flirt -in example_func -ref anat_brain -out example_func2highres -omat example_func2highres.mat -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear 

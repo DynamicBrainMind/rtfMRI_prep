@@ -64,7 +64,7 @@ end=$(date +%s)
 echo "done BET; total elapsed time: $(($end-$start)) seconds"
 
 # register to T1 and standard space and make transforms
-bet2 ${anat} anat_brain # remove skull from T1 image
+bet ${anat} anat_brain -R # remove skull from T1 image
 flirt -in example_func -ref anat_brain -out example_func2highres -omat example_func2highres.mat -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear 
 convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat # make inverse transform
 end=$(date +%s)
