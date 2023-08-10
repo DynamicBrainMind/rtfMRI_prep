@@ -54,7 +54,7 @@ volumes=`fslinfo ${data} | grep "^dim4" | awk '{print $2}'`
 echo "n volumes = ${volumes}"
 
 # extract middle fMRI volume (template)
-example_vol=`python -c "print ($volumes/2)"`
+example_vol=`python3 -c "print ($volumes/2)"`
 fslroi ${data} example_func ${example_vol} 1 # extract middle func volume as template
 
 # brain extraction (skull removal)
@@ -132,5 +132,5 @@ mv highres2example_func.mat highres2standard.mat highres2standard.nii.gz standar
 mv example_func2highres.mat example_func2highres.nii.gz example_func2standard.mat standard2example_func.mat reg
 
 end=$(date +%s)
-end_mins=`python -c "print (($end-$start)/60 )"`
+end_mins=`python3 -c "print (($end-$start)/60 )"`
 echo "done preparing for OpenNFT: total elapsed time: $end_mins minutes"

@@ -61,7 +61,7 @@ volumes=`fslinfo ${data} | grep "^dim4" | awk '{print $2}'`
 echo "n volumes = ${volumes}"
 
 # delete first 4 volumes
-vols_retain=`python -c "print ($volumes-$n_delete )"`
+vols_retain=`python3 -c "print ($volumes-$n_delete )"`
 fslroi ${data} func_trimmed $n_delete $vols_retain
 end=$(date +%s)
 echo "done deleting first 4 volumes; total elapsed time: $(($end-$start)) seconds"
@@ -81,7 +81,7 @@ echo "done BET; total elapsed time: $(($end-$start)) seconds"
 
 # register to T1 and standard space and make transforms
 bet ${anat} anat_brain -R # remove skull from T1 image
-example_vol=`python -c "print ($vols_retain/2)"`
+example_vol=`python3 -c "print ($vols_retain/2)"`
 fslroi func_mcf_bet example_func ${example_vol} 1 # extract middle func volume as template
 flirt -in example_func -ref anat_brain -out example_func2highres -omat example_func2highres.mat -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear 
 convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat # make inverse transform
@@ -106,7 +106,7 @@ end=$(date +%s)
 echo "done smoothing; total elapsed time: $(($end-$start)) seconds"
 
 # Highpass filtering at 0.01 Hz
-hp_sigma=`python -c "print (((1/.01)/2)/$tr)"`
+hp_sigma=`python3 -c "print (((1/.01)/2)/$tr)"`
 fslmaths func_smooth -Tmean tempMean
 fslmaths func_smooth -bptf $hp_sigma 0 -add tempMean func_preproc
 end=$(date +%s)
@@ -120,7 +120,7 @@ sed -e "s+####PATH####+${path}+g" temp2.fsf > feat_glm.fsf
 rm -f temp1.fsf temp2.fsf
 feat feat_glm.fsf
 end=$(date +%s)
-end_mins=`python -c "print (($end-$start)/60 )"`
+end_mins=`python3 -c "print (($end-$start)/60 )"`
 echo "done running GLM: total elapsed time: $end_mins minutes"
 
 # Make ROIs
@@ -134,8 +134,8 @@ fslmaths PMC_z -mul -1 PMC_z #flip zstat image for negative
 # get top 200 voxels for daIC
 daIC_vol=`fslstats daIC -V`
 daIC_vol=$(echo $daIC_vol | awk '{print $1}')
-daIC_retain=`python -c "print ($final_vol / float($daIC_vol) )"`
-daIC_cutoff=`python -c "print (100-($daIC_retain*100) )"`
+daIC_retain=`python3 -c "print ($final_vol / float($daIC_vol) )"`
+daIC_cutoff=`python3 -c "print (100-($daIC_retain*100) )"`
 daIC_thr=`fslstats daIC_z -P $daIC_cutoff`
 fslmaths daIC_z -thr $daIC_thr daIC_thr
 z_daIC=`fslstats daIC_thr -M`
@@ -145,8 +145,8 @@ fslmaths daIC_thr -bin daIC_ROI
 # bottom 200 voxels for PMC 
 PMC_vol=`fslstats PMC -V`
 PMC_vol=$(echo $PMC_vol | awk '{print $1}')
-PMC_retain=`python -c "print ($final_vol / float($PMC_vol) )"`
-PMC_cutoff=`python -c "print (100-($PMC_retain*100) )"`
+PMC_retain=`python3 -c "print ($final_vol / float($PMC_vol) )"`
+PMC_cutoff=`python3 -c "print (100-($PMC_retain*100) )"`
 PMC_thr=`fslstats PMC_z -P $PMC_cutoff`
 fslmaths PMC_z -thr $PMC_thr PMC_thr
 z_PMC=`fslstats PMC_thr -M`
@@ -202,5 +202,5 @@ test_path=${path}/OpenNFT
 sed -e "s+####TESTPATH####+${test_path}+g" OpenNFT/tests/temp.py > OpenNFT/tests/testRTexp.py
 rm -f OpenNFT/tests/temp.py
 
-end_mins=`python -c "print (($end-$start)/60 )"`
+end_mins=`python3 -c "print (($end-$start)/60 )"`
 echo "done OpenNFT setup: total elapsed time: $end_mins minutes"
