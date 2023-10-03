@@ -111,9 +111,15 @@ cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 # .ini file setup
 cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
+matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
+matsizey=`fslinfo ${data} | grep "^dim2" | awk '{print $2}'`
+slices=`fslinfo ${data} | grep "^dim3" | awk '{print $2}'`
 sed -e "s/####SUBNAME####/${sub}/g" OpenNFT/config/temp1.ini > OpenNFT/config/temp2.ini
-sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp2.ini > OpenNFT/config/rtfmri_es.ini
-rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini
+sed -e "s/####MATSIZEX####/${matsizex}/g" OpenNFT/config/temp2.ini > OpenNFT/config/temp3.ini
+sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/config/temp4.ini
+sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
+sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp5.ini > OpenNFT/config/rtfmri_es.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini
 
 # set up "test" folder for simulation
 mkdir -p OpenNFT/tests
