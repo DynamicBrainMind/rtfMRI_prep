@@ -185,12 +185,14 @@ cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
 matsizey=`fslinfo ${data} | grep "^dim2" | awk '{print $2}'`
 slices=`fslinfo ${data} | grep "^dim3" | awk '{print $2}'`
+tr=`python3 -c "print ($tr*1000)"`
 sed -e "s/####SUBNAME####/${sub}/g" OpenNFT/config/temp1.ini > OpenNFT/config/temp2.ini
 sed -e "s/####MATSIZEX####/${matsizex}/g" OpenNFT/config/temp2.ini > OpenNFT/config/temp3.ini
 sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/config/temp4.ini
 sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
-sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp5.ini > OpenNFT/config/rtfmri_es.ini
-rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini
+sed -e "s/####TR####/${tr}/g" OpenNFT/config/temp5.ini > OpenNFT/config/temp6.ini
+sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp6.ini > OpenNFT/config/rtfmri_es.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini
 
 # organize outputs
 rm -f func_smooth.nii.gz func_trimmed.nii.gz func_mcf.nii.gz func_mcf_bet.nii.gz tempMean.nii.gz feat_glm.fsf mask_mask.nii.gz mean_func.nii.gz
