@@ -114,7 +114,7 @@ cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
 matsizey=`fslinfo ${data} | grep "^dim2" | awk '{print $2}'`
 slices=`fslinfo ${data} | grep "^dim3" | awk '{print $2}'`
-tr=`python3 -c "print ($tr*1000)"`
+tr=`python3 -c "print (int($tr*1000))"`
 sed -e "s/####SUBNAME####/${sub}/g" OpenNFT/config/temp1.ini > OpenNFT/config/temp2.ini
 sed -e "s/####MATSIZEX####/${matsizex}/g" OpenNFT/config/temp2.ini > OpenNFT/config/temp3.ini
 sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/config/temp4.ini
