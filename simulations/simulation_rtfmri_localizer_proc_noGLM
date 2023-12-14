@@ -96,13 +96,14 @@ echo "done making ROIs based on registration from standard space; total elapsed 
 
 # Prepare for OpenNFT (8 runs)
 mkdir -p OpenNFT
-for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
+for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8
 do
 mkdir -p OpenNFT/${run}_src
 mkdir -p OpenNFT/${run}
 mkdir -p OpenNFT/EPI_Template
 mkdir -p OpenNFT/T1
 mkdir -p OpenNFT/Data_${run}
+mkdir -p OpenNFT/${run}
 mkdir -p OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/config
 cp -r ${rtfMRI_path}/Settings OpenNFT
@@ -128,11 +129,11 @@ echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds
 done
 
 # Set up daIC and PMC switch as ROI on every other run
-for run in Run_1 Run_3 Run_5 Run_7 Run_9
+for run in Run_1 Run_3 Run_5 Run_7
 do
 cp ROI1_daIC_sphere.nii OpenNFT/${run}/ROIs
 done
-for run in Run_2 Run_4 Run_6 Run_8 Run_10
+for run in Run_2 Run_4 Run_6 Run_8
 do
 cp ROI2_PMC_sphere.nii OpenNFT/${run}/ROIs
 done

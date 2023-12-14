@@ -1,7 +1,7 @@
 #! /bin/bash -f
 
 # needs 3 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
-# must run this from within a folder that contains both of these files as well as Mt_EV.txt file for gradCPT GLM
+# must run this from within a folder that contains both of these files
 
 # Add path to this script to .bash_profile (on Mac)
 # e.g. add these two lines:
@@ -167,21 +167,19 @@ echo "done making ROIs: total elapsed time: $end_mins minutes"
 
 # Prepare for OpenNFT
 mkdir -p OpenNFT
+mkdir -p OpenNFT/Run_1_src
+mkdir -p OpenNFT/Run_1
 mkdir -p OpenNFT/EPI_Template
 mkdir -p OpenNFT/T1
+mkdir -p OpenNFT/Data_1
+mkdir -p OpenNFT/ROIs
 mkdir -p OpenNFT/config
+cp -r ${rtfMRI_path}/Settings OpenNFT
+cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
+cp ROI1_daIC.nii OpenNFT/ROIs
 gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
 cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
-cp -r ${rtfMRI_path}/Settings OpenNFT
-cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
-
-for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
-do
-mkdir -p OpenNFT/${run}_src
-mkdir -p OpenNFT/${run}
-mkdir -p OpenNFT/${run}/ROIs
-mkdir -p OpenNFT/Data_${run}
 # .ini file setup
 cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
@@ -193,22 +191,9 @@ sed -e "s/####MATSIZEX####/${matsizex}/g" OpenNFT/config/temp2.ini > OpenNFT/con
 sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/config/temp4.ini
 sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
 sed -e "s/####TR####/${tr}/g" OpenNFT/config/temp5.ini > OpenNFT/config/temp6.ini
-sed -e "s/####RUN####/${run}/g" OpenNFT/config/temp6.ini > OpenNFT/config/temp7.ini
-sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp7.ini > OpenNFT/config/rtfmri_es_${run}.ini
-rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini
-done
-
-echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
-# Set up daIC and PMC switch as ROI on every other run
-for run in Run_1 Run_3 Run_5 Run_7 Run_9
-do
-cp ROI1_daIC.nii OpenNFT/${run}/ROIs
-done
-for run in Run_2 Run_4 Run_6 Run_8 Run_10
-do
-cp ROI2_PMC.nii OpenNFT/${run}/ROIs
-done
-echo "done copying ROIs to OpenNFT folder; total elapsed time: $(($end-$start)) seconds"
+sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp6.ini > OpenNFT/config/rtfmri_es.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini
+echo "done making .ini setup file; total elapsed time: $(($end-$start)) seconds"
 
 # organize outputs
 rm -f func_smooth.nii.gz func_trimmed.nii.gz func_mcf.nii.gz func_mcf_bet.nii.gz tempMean.nii.gz feat_glm.fsf mask_mask.nii.gz mean_func.nii.gz
