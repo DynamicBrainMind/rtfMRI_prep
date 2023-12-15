@@ -5,7 +5,7 @@
 		{
 			"ConditionName": "NFBREG",
 			"OnOffsets": [
-				[21,540],
+				[11,230],
 			]
 		}
 	]
