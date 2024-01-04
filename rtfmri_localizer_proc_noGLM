@@ -49,7 +49,9 @@ path=`pwd`
 # remove any previously created conflicting files
 rm -f example_func.nii anat_brain_funcaligned.nii
 
-# get # volumes
+# get # volumes, TR
+tr=`fslinfo ${data} | grep "^pixdim4" | awk '{print $2}'`
+echo "TR = ${tr}"
 volumes=`fslinfo ${data} | grep "^dim4" | awk '{print $2}'`
 echo "n volumes = ${volumes}"
 
