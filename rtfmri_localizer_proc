@@ -60,6 +60,18 @@ echo "TR = ${tr}"
 volumes=`fslinfo ${data} | grep "^dim4" | awk '{print $2}'`
 echo "n volumes = ${volumes}"
 
+# check that this is fMRI data (exit if not)
+if [ $volumes -lt 5 ]; then
+	echo "few volumes in specified fMRI data; check file and try again"
+	exit	
+fi
+# check that anat data looks correct
+anat_volumes=`fslinfo ${anat} | grep "^dim4" | awk '{print $2}'`
+if [ $anat_volumes -gt 4 ]; then
+	echo "too many volumes in specified T1 data; check file and try again"
+	exit	
+fi
+
 # delete first 4 volumes
 vols_retain=`python3 -c "print ($volumes-$n_delete )"`
 fslroi ${data} func_trimmed $n_delete $vols_retain
