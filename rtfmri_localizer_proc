@@ -187,6 +187,9 @@ cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 cp -r ${rtfMRI_path}/Settings OpenNFT
 cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
+watchpath=`echo ${path%/*}`
+watchpath=`echo ${watchpath%/*}`
+watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
 
 for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
 do
@@ -206,7 +209,7 @@ sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/con
 sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
 sed -e "s/####TR####/${tr}/g" OpenNFT/config/temp5.ini > OpenNFT/config/temp6.ini
 sed -e "s/####RUN####/${run}/g" OpenNFT/config/temp6.ini > OpenNFT/config/temp7.ini
-sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp7.ini > OpenNFT/config/rtfmri_es_${run}.ini
+sed -e "s+####SUBJECTPATH####+${watchpath}+g" OpenNFT/config/temp7.ini > OpenNFT/config/rtfmri_es_${run}.ini
 rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini
 done
 
@@ -237,6 +240,17 @@ cp ${rtfMRI_path}/tests/testRTexp.py OpenNFT/tests/temp.py
 test_path=${path}/OpenNFT
 sed -e "s+####TESTPATH####+${test_path}+g" OpenNFT/tests/temp.py > OpenNFT/tests/testRTexp.py
 rm -f OpenNFT/tests/temp.py
+
+# Make plots of ROIs
+fslmaths Mt_GLM.feat/stats/zstat1 -mul -1 Mt_GLM.feat/stats/zstat1_negative
+fsleyes render --scene lightbox -of activation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of deactivation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1_negative -cm blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of activation_ROIs_sagittal.png -slightbox -nr 10 -nc 10 -zx X example_func ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of deactivation_ROIs_sagittal.png -slightbox -nr 10 -nc 10 -zx X example_func ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1_negative -cm blue-lightblue -dr 2 5 -a 25 
+open activation_ROIs_axial.png
+open deactivation_ROIs_axial.png
+open activation_ROIs_sagittal.png
+open deactivation_ROIs_sagittal.png
 
 end_mins=`python3 -c "print (($end-$start)/60 )"`
 echo "done OpenNFT setup: total elapsed time: $end_mins minutes"
