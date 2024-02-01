@@ -1,3 +1,4 @@
 #! /bin/bash -f
 
-fsleyes example_func ROIs/PMC -cm blue-lightblue -a 25 ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC -cm red-yellow -a 25 ROIs/daIC_ROI -cm red-yellow ROIs/WM_ROI -cm brain_colours_greengray
+fsleyes example_func  ROIs/PMC_ROI -cm blue-lightblue ROIs/daIC_ROI -cm red-yellow \
+	Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 8 -a 25

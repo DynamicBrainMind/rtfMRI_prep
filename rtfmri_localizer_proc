@@ -76,7 +76,7 @@ fi
 vols_retain=`python3 -c "print ($volumes-$n_delete )"`
 fslroi ${data} func_trimmed $n_delete $vols_retain
 end=$(date +%s)
-echo "done deleting first 4 volumes; total elapsed time: $(($end-$start)) seconds"
+echo "done deleting ${n_delete} volumes; total elapsed time: $(($end-$start)) seconds"
 
 # Motion correction
 mcflirt -in func_trimmed -out func_mcf 
