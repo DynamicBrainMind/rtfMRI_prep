@@ -190,6 +190,8 @@ cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
 watchpath=`echo ${path%/*}`
 watchpath=`echo ${watchpath%/*}`
 watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
+subjectpath=`echo ${watchpath%/*}`
+subjectpath=${subjectpath}/Subjects/${sub}
 
 for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
 do
@@ -209,8 +211,9 @@ sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/con
 sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
 sed -e "s/####TR####/${tr}/g" OpenNFT/config/temp5.ini > OpenNFT/config/temp6.ini
 sed -e "s/####RUN####/${run}/g" OpenNFT/config/temp6.ini > OpenNFT/config/temp7.ini
-sed -e "s+####SUBJECTPATH####+${watchpath}+g" OpenNFT/config/temp7.ini > OpenNFT/config/rtfmri_es_${run}.ini
-rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini
+sed -e "s+####SUBJECTPATH####+${subjectpath}+g" OpenNFT/config/temp7.ini > OpenNFT/config/temp8.ini
+sed -e "s+####WATCHPATH####+${watchpath}+g" OpenNFT/config/temp8.ini > OpenNFT/config/rtfmri_es_${run}.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini OpenNFT/config.temp8.ini
 done
 
 echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
