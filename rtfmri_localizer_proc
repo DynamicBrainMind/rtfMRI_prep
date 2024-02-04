@@ -1,6 +1,6 @@
 #! /bin/bash -f
 
-# needs 3 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
+# needs 4 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok); (4) counter-balance order for ROIs (1 or 2)
 # must run this from within a folder that contains both of these files as well as Mt_EV.txt file for gradCPT GLM
 
 # Add path to this script to .bash_profile (on Mac)
@@ -10,8 +10,11 @@
 
 usage() {
     echo ""
-	echo "rtfmri_localizer_proc <subject_name> <fMRI_nii_file> <anat_nii_file>"
-	echo "optional 4th argument: final # of voxels for ROIs (default=200)"
+	echo "rtfmri_localizer_proc <subject_name> <fMRI_nii_file> <anat_nii_file> <counter_balance>"
+	echo ""
+	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file; (4) ROI counter-balance order for OpenNFT (1 or 2)"
+	echo ""
+	echo "optional 5th argument: final # of voxels for ROIs (default=200)"
 }
 
 # rtfMRI code path
@@ -22,6 +25,7 @@ rtfMRI_path=`echo "${a%/*}/"`
 sub="$1"
 data="$2";
 anat="$3";
+balance="$4"
 
 if [[ $# -eq 0 ]] ; then
 	usage
@@ -43,7 +47,12 @@ if [ -z "$3" ]; then
   exit
 fi
 
-final_vol=${4:-200}  
+if [ -z "$4" ]; then
+  echo "No counter-balance order entered as input 4 (must enter 1 or 2)"
+  exit
+fi
+
+final_vol=${5:-200}  
 echo "final ROI size is set to ${final_vol} voxels"
 
 # settings
@@ -168,12 +177,12 @@ fslmaths PMC_thr -bin PMC_ROI
 # White matter ROI
 flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/WM/WM_sphere -out WM_ROI -applyxfm -init standard2example_func.mat -interp trilinear
 fslmaths WM_ROI -bin WM_ROI
-fslmaths daIC_ROI -bin ROI1_daIC -odt int # convert to int for OpenNFT compatibility
-gunzip ROI1_daIC.nii.gz
-fslmaths PMC_ROI -bin ROI2_PMC -odt int # convert to int for OpenNFT compatibility
-gunzip ROI2_PMC.nii.gz
-fslmaths WM_ROI -bin ROI3_WM -odt int # convert to int for OpenNFT compatibility
-gunzip ROI3_WM.nii.gz
+fslmaths daIC_ROI -bin ROI_daIC -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_daIC.nii.gz
+fslmaths PMC_ROI -bin ROI_PMC -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_PMC.nii.gz
+fslmaths WM_ROI -bin ROI_WM -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_WM.nii.gz
 end=$(date +%s)
 echo "done making ROIs: total elapsed time: $end_mins minutes"
 
@@ -218,15 +227,27 @@ done
 
 echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
 # Set up daIC and PMC switch as ROI on every other run
-for run in Run_1 Run_3 Run_5 Run_7 Run_9
-do
-cp ROI1_daIC.nii OpenNFT/${run}/ROIs
-done
-for run in Run_2 Run_4 Run_6 Run_8 Run_10
-do
-cp ROI2_PMC.nii OpenNFT/${run}/ROIs
-done
-echo "done copying ROIs to OpenNFT folder; total elapsed time: $(($end-$start)) seconds"
+if [ "$balance" = "1" ]; then
+	for run in Run_1 Run_3 Run_5 Run_7 Run_9
+	do
+		cp ROI_daIC.nii OpenNFT/${run}/ROIs
+	done
+	for run in Run_2 Run_4 Run_6 Run_8 Run_10
+	do
+		cp ROI_PMC.nii OpenNFT/${run}/ROIs
+	done
+fi
+if [ "$balance" = 2 ]; then
+	for run in Run_1 Run_3 Run_5 Run_7 Run_9
+	do
+		cp ROI_PMC.nii OpenNFT/${run}/ROIs
+	done
+	for run in Run_2 Run_4 Run_6 Run_8 Run_10
+	do
+		cp ROI_daIC.nii OpenNFT/${run}/ROIs
+	done
+fi
+echo "done copying ROIs to OpenNFT folder (counter-balance order: ${balance}); total elapsed time: $(($end-$start)) seconds"
 
 # organize outputs
 rm -f func_smooth.nii.gz func_trimmed.nii.gz func_mcf.nii.gz func_mcf_bet.nii.gz tempMean.nii.gz feat_glm.fsf mask_mask.nii.gz mean_func.nii.gz
