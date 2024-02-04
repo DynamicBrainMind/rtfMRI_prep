@@ -4,17 +4,20 @@
 # must run this from within a folder that contains both of these files as well as Mt_EV.txt file for gradCPT GLM
 
 # Add path to this script to .bash_profile (on Mac)
-# e.g. add these two lines:
-# PATH="/Users/ak4379/Documents/rtfMRI:${PATH}"
+# e.g. add these two lines (replacing the path with correct location on your system):
+# PATH="/Users/ak4379/Documents/scripts/rtfMRI_prep:${PATH}"
 # export PATH
 
 usage() {
     echo ""
-	echo "rtfmri_localizer_proc <subject_name> <fMRI_nii_file> <anat_nii_file> <counter_balance>"
+	echo "rtfmri_localizer_proc <subject_name> <fMRI_nii_file> <anat_nii_file> <counterbalance_order>"
 	echo ""
 	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file; (4) ROI counter-balance order for OpenNFT (1 or 2)"
 	echo ""
 	echo "optional 5th argument: final # of voxels for ROIs (default=200)"
+	echo ""
+	echo "***YOU MUST RUN THIS FROM WITHIN DIRECTORY CONTAINING INPUT FILES***"
+	echo "(and this input directory must be within Subjects/<sub> parallel to the watch folder)"
 }
 
 # rtfMRI code path
@@ -60,7 +63,7 @@ n_delete=0
 start=$(date +%s)
 
 # remove any previously created .feat folders and conflicting files
-rm -r -f *.feat
+rm -r -f Mt_GLM.feat
 rm -f example_func.nii anat_brain_funcaligned.nii
 
 # get # volumes, TR

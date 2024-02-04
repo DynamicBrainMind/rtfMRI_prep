@@ -1,16 +1,21 @@
 #! /bin/bash -f
 
-# needs 3 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
+# needs 4 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok); (4) counter-balance order for ROIs (1 or 2)
 # must run this from within a folder that contains both of these files
 
 # Add path to this script to .bash_profile (on Mac)
-# e.g. add these two lines:
-# PATH="/Users/ak4379/Documents/rtfMRI:${PATH}"
+# e.g. add these two lines (replacing the path with correct location on your system):
+# PATH="/Users/ak4379/Documents/scripts/rtfMRI_prep:${PATH}"
 # export PATH
 
 usage() {
     echo ""
-	echo "rtfmri_localizer_proc_noGLM <subject_name> <fMRI_nii_file> <anat_nii_file>"
+	echo "rtfmri_localizer_proc_noGLM <subject_name> <fMRI_nii_file> <anat_nii_file> <counterbalance_order>"
+	echo ""
+	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file; (4) ROI counter-balance order for OpenNFT (1 or 2)"
+	echo ""
+	echo "***YOU MUST RUN THIS FROM WITHIN DIRECTORY CONTAINING INPUT FILES***"
+	echo "(and this input directory must be within Subjects/<sub> parallel to the watch folder)"
 }
 
 # rtfMRI code path
@@ -21,6 +26,7 @@ rtfMRI_path=`echo "${a%/*}/"`
 sub="$1"
 data="$2";
 anat="$3";
+balance="$4";
 
 if [[ $# -eq 0 ]] ; then
 	usage
@@ -39,6 +45,11 @@ fi
 
 if [ -z "$3" ]; then
   echo "No T1 data entered as input 2"
+  exit
+fi
+
+if [ -z "$4" ]; then
+  echo "No counter-balance order entered as input 4 (must enter 1 or 2)"
   exit
 fi
 
@@ -97,19 +108,22 @@ echo "done registering to standard space and making transforms; total elapsed ti
 # Make ROIs
 flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/daIC/right/k3/daIC_sphere.nii.gz -out daIC_sphere -applyxfm -init standard2example_func.mat -interp trilinear
 flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/PMC/PMC_sphere -out PMC_sphere -applyxfm -init standard2example_func.mat -interp trilinear
-fslmaths daIC_sphere -bin ROI1_daIC_sphere -odt int # convert to int for OpenNFT compatibility
-gunzip ROI1_daIC_sphere.nii.gz
-fslmaths PMC_sphere -bin ROI2_PMC_sphere -odt int # convert to int for OpenNFT compatibility
-gunzip ROI2_PMC_sphere.nii.gz
+fslmaths daIC_sphere -bin ROI_daIC_sphere -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_daIC_sphere.nii.gz
+fslmaths PMC_sphere -bin ROI_PMC_sphere -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_PMC_sphere.nii.gz
 # White matter ROI
 flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/WM/WM_sphere -out WM_ROI -applyxfm -init standard2example_func.mat -interp trilinear
-fslmaths WM_ROI -bin ROI3_WM -odt int
-gunzip ROI3_WM.nii.gz
+fslmaths WM_ROI -bin ROI_WM -odt int
+gunzip ROI_WM.nii.gz
 end=$(date +%s)
 echo "done making ROIs based on registration from standard space; total elapsed time: $(($end-$start)) seconds"
 
-# Prepare for OpenNFT (8 runs)
+# Prepare for OpenNFT (10 runs)
 mkdir -p OpenNFT
+gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
+cp example_func.nii OpenNFT/EPI_Template
+cp anat_brain_funcaligned.nii OpenNFT/T1
 for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
 do
 mkdir -p OpenNFT/${run}_src
@@ -117,13 +131,16 @@ mkdir -p OpenNFT/${run}
 mkdir -p OpenNFT/EPI_Template
 mkdir -p OpenNFT/T1
 mkdir -p OpenNFT/Data_${run}
+rm -r -f OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/config
 cp -r ${rtfMRI_path}/Settings OpenNFT
 cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
-gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
-cp example_func.nii OpenNFT/EPI_Template
-cp anat_brain_funcaligned.nii OpenNFT/T1
+watchpath=`echo ${path%/*}`
+watchpath=`echo ${watchpath%/*}`
+watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
+subjectpath=`echo ${watchpath%/*}`
+subjectpath=${subjectpath}/Subjects/${sub}
 # .ini file setup
 cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
@@ -136,21 +153,34 @@ sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/con
 sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
 sed -e "s/####TR####/${tr}/g" OpenNFT/config/temp5.ini > OpenNFT/config/temp6.ini
 sed -e "s/####RUN####/${run}/g" OpenNFT/config/temp6.ini > OpenNFT/config/temp7.ini
-sed -e "s+####SUBJECTPATH####+${path}+g" OpenNFT/config/temp7.ini > OpenNFT/config/rtfmri_es_${run}.ini
-rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini
-echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
+sed -e "s+####SUBJECTPATH####+${subjectpath}+g" OpenNFT/config/temp7.ini > OpenNFT/config/temp8.ini
+sed -e "s+####WATCHPATH####+${watchpath}+g" OpenNFT/config/temp8.ini > OpenNFT/config/rtfmri_es_${run}.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini OpenNFT/config.temp8.ini
 done
+echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
 
 # Set up daIC and PMC switch as ROI on every other run
-for run in Run_1 Run_3 Run_5 Run_7 Run_9
-do
-cp ROI1_daIC_sphere.nii OpenNFT/${run}/ROIs
-done
-for run in Run_2 Run_4 Run_6 Run_8 Run_10
-do
-cp ROI2_PMC_sphere.nii OpenNFT/${run}/ROIs
-done
-echo "done copying ROIs to OpenNFT folder; total elapsed time: $(($end-$start)) seconds"
+if [ "$balance" = "1" ]; then
+	for run in Run_1 Run_3 Run_5 Run_7 Run_9
+	do
+		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs
+	done
+	for run in Run_2 Run_4 Run_6 Run_8 Run_10
+	do
+		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs
+	done
+fi
+if [ "$balance" = 2 ]; then
+	for run in Run_1 Run_3 Run_5 Run_7 Run_9
+	do
+		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs
+	done
+	for run in Run_2 Run_4 Run_6 Run_8 Run_10
+	do
+		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs
+	done
+fi
+echo "done copying ROIs to OpenNFT folder (counter-balance order: ${balance}); total elapsed time: $(($end-$start)) seconds"
 
 # set up "test" folder for simulation
 mkdir -p OpenNFT/tests
@@ -162,9 +192,9 @@ rm -f OpenNFT/tests/temp.py
 # organize outputs
 mkdir -p ROIs
 rm -f data_bet.nii.gz
-mv daIC_sphere.nii.gz ROI1_daIC_sphere.nii ROIs
-mv PMC_sphere.nii.gz ROI2_PMC_sphere.nii ROIs
-mv WM_ROI.nii.gz ROI3_WM.nii ROIs
+mv daIC_sphere.nii.gz ROI_daIC_sphere.nii ROIs
+mv PMC_sphere.nii.gz ROI_PMC_sphere.nii ROIs
+mv WM_ROI.nii.gz ROI_WM.nii ROIs
 mv highres2example_func.mat highres2standard.mat highres2standard.nii.gz standard2highres.mat reg
 mv example_func2highres.mat example_func2highres.nii.gz example_func2standard.mat standard2example_func.mat reg
 
