@@ -1,5 +1,5 @@
 # rtfMRI_prep
-These scripts are for processing functional localizer data immediately after data collection to define individual-level ROIs to target with real-time fMRI.
+These scripts are for processing functional localizer data immediately after data collection to define individual-level ROIs to target with real-time fMRI. The current version is based on using the [GradCPT](https://academic.oup.com/cercor/article/23/11/2712/303412) as the functional localizer task.
 
 **Setup**
 1. After cloning this repository, add the path to your bash startup script (.bash_profile on Mac), e.g. by adding these 2 lines (using your own path) to the script:
