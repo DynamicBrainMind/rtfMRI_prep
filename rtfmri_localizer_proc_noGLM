@@ -160,24 +160,29 @@ done
 echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
 
 # Set up daIC and PMC switch as ROI on every other run
+# Set up daIC and PMC switch as ROI on every other run
 if [ "$balance" = "1" ]; then
 	for run in Run_1 Run_3 Run_5 Run_7 Run_9
 	do
-		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs
+		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs/ROI1_daIC_sphere.nii
+		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs/ROI2_PMC_sphere.nii
 	done
 	for run in Run_2 Run_4 Run_6 Run_8 Run_10
 	do
-		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs
+		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs/ROI1_PMC_sphere.nii
+		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs/ROI2_daIC_sphere.nii
 	done
 fi
 if [ "$balance" = 2 ]; then
 	for run in Run_1 Run_3 Run_5 Run_7 Run_9
 	do
-		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs
+		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs/ROI1_PMC_sphere.nii
+		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs/ROI2_daIC_sphere.nii
 	done
 	for run in Run_2 Run_4 Run_6 Run_8 Run_10
 	do
-		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs
+		cp ROI_daIC_sphere.nii OpenNFT/${run}/ROIs/ROI1_daIC_sphere.nii
+		cp ROI_PMC_sphere.nii OpenNFT/${run}/ROIs/ROI2_PMC_sphere.nii
 	done
 fi
 echo "done copying ROIs to OpenNFT folder (counter-balance order: ${balance}); total elapsed time: $(($end-$start)) seconds"
