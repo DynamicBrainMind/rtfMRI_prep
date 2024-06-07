@@ -234,21 +234,25 @@ echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds
 if [ "$balance" = "1" ]; then
 	for run in Run_1 Run_3 Run_5 Run_7 Run_9
 	do
-		cp ROI_daIC.nii OpenNFT/${run}/ROIs
+		cp ROI_daIC.nii OpenNFT/${run}/ROIs/ROI1_daIC.nii
+		cp ROI_PMC.nii OpenNFT/${run}/ROIs/ROI2_PMC.nii
 	done
 	for run in Run_2 Run_4 Run_6 Run_8 Run_10
 	do
-		cp ROI_PMC.nii OpenNFT/${run}/ROIs
+		cp ROI_PMC.nii OpenNFT/${run}/ROIs/ROI1_PMC.nii
+		cp ROI_daIC.nii OpenNFT/${run}/ROIs/ROI2_daIC.nii
 	done
 fi
 if [ "$balance" = 2 ]; then
 	for run in Run_1 Run_3 Run_5 Run_7 Run_9
 	do
-		cp ROI_PMC.nii OpenNFT/${run}/ROIs
+		cp ROI_PMC.nii OpenNFT/${run}/ROIs/ROI1_PMC.nii
+		cp ROI_daIC.nii OpenNFT/${run}/ROIs/ROI2_daIC.nii
 	done
 	for run in Run_2 Run_4 Run_6 Run_8 Run_10
 	do
-		cp ROI_daIC.nii OpenNFT/${run}/ROIs
+		cp ROI_daIC.nii OpenNFT/${run}/ROIs/ROI1_daIC.nii
+		cp ROI_PMC.nii OpenNFT/${run}/ROIs/ROI2_PMC.nii
 	done
 fi
 echo "done copying ROIs to OpenNFT folder (counter-balance order: ${balance}); total elapsed time: $(($end-$start)) seconds"
