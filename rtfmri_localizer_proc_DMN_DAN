@@ -1,0 +1,283 @@
+#! /bin/bash -f
+
+# needs 4 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok); (4) counter-balance order for ROIs (1 or 2)
+# must run this from within a folder that contains both of these files as well as Mt_EV.txt file for gradCPT GLM
+
+# Add path to this script to .bash_profile (on Mac)
+# e.g. add these two lines (replacing the path with correct location on your system):
+# PATH="/Users/ak4379/Documents/scripts/rtfMRI_prep:${PATH}"
+# export PATH
+
+usage() {
+    echo ""
+	echo "Creates ROIs for DMN and DAN based on top 10% activated and deactivated voxels, respectively"
+	echo ""
+	echo "rtfmri_localizer_proc_DMN_DAN <subject_name> <fMRI_nii_file> <anat_nii_file> <counterbalance_order>"
+	echo ""
+	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file; (4) ROI counter-balance order for OpenNFT (1 or 2)"
+	echo ""
+	echo "***YOU MUST RUN THIS FROM WITHIN DIRECTORY CONTAINING INPUT FILES***"
+	echo "(and this input directory must be within Subjects/<sub> parallel to the OpenNFT watch folder)"
+}
+
+# rtfMRI code path
+a=`which rtfmri_localizer_proc`
+rtfMRI_path=`echo "${a%/*}/"`
+
+# Inputs
+sub="$1"
+data="$2";
+anat="$3";
+balance="$4"
+
+if [[ $# -eq 0 ]] ; then
+	usage
+    exit 
+fi
+
+if [ -z "$1" ]; then
+  echo "No subject name entered as input 1"
+  exit
+fi
+
+if [ -z "$2" ]; then
+  echo "No fMRI data entered as input 2"
+  exit
+fi
+
+if [ -z "$3" ]; then
+  echo "No T1 data entered as input 3"
+  exit
+fi
+
+if [ -z "$4" ]; then
+  echo "No counter-balance order entered as input 4 (must enter 1 or 2)"
+  exit
+fi
+
+#final_vol=${5:-200}  
+#echo "final ROI size is set to ${final_vol} voxels"
+
+# settings
+n_delete=0
+start=$(date +%s)
+
+# remove any previously created .feat folders and conflicting files
+rm -r -f Mt_GLM.feat
+rm -f example_func.nii anat_brain_funcaligned.nii
+
+# get # volumes, TR
+tr=`fslinfo ${data} | grep "^pixdim4" | awk '{print $2}'`
+echo "TR = ${tr}"
+volumes=`fslinfo ${data} | grep "^dim4" | awk '{print $2}'`
+echo "n volumes = ${volumes}"
+
+# check that this is fMRI data (exit if not)
+if [ $volumes -lt 5 ]; then
+	echo "few volumes in specified fMRI data; check file and try again"
+	exit	
+fi
+# check that anat data looks correct
+anat_volumes=`fslinfo ${anat} | grep "^dim4" | awk '{print $2}'`
+if [ $anat_volumes -gt 4 ]; then
+	echo "too many volumes in specified T1 data; check file and try again"
+	exit	
+fi
+
+# delete first 4 volumes
+vols_retain=`python3 -c "print ($volumes-$n_delete )"`
+fslroi ${data} func_trimmed $n_delete $vols_retain
+end=$(date +%s)
+echo "done deleting ${n_delete} volumes; total elapsed time: $(($end-$start)) seconds"
+
+# Motion correction
+mcflirt -in func_trimmed -out func_mcf 
+end=$(date +%s)
+echo "done motion correction; total elapsed time: $(($end-$start)) seconds"
+
+# brain extraction (skull removal)
+bet2 func_mcf mask -f 0.3 -n -m
+niimath func_mcf -Tmean mean_func
+niimath mean_func -mas mask_mask mask
+niimath func_mcf -mas mask func_mcf_bet
+end=$(date +%s)
+echo "done BET; total elapsed time: $(($end-$start)) seconds"
+
+# register to T1 and standard space and make transforms
+bet ${anat} anat_brain -R # remove skull from T1 image
+example_vol=`python3 -c "print ($vols_retain/2)"`
+fslroi func_mcf_bet example_func ${example_vol} 1 # extract middle func volume as template
+flirt -in example_func -ref anat_brain -out example_func2highres -omat example_func2highres.mat -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear 
+convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat # make inverse transform
+end=$(date +%s)
+mkdir -p reg
+slices example_func2highres anat_brain # pop up visualization for func 2 struct registration quality
+slices example_func2highres anat_brain -o reg/func2highres.gif # save image
+echo "done registering func to struct; total elapsed time: $(($end-$start)) seconds"
+flirt -in anat_brain -ref ${rtfMRI_path}/rt-fMRI_ROIs/standard -out highres2standard -omat highres2standard.mat -cost corratio -dof 12 -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -interp trilinear 
+convert_xfm -inverse -omat standard2highres.mat highres2standard.mat # make inverse transform
+convert_xfm -omat example_func2standard.mat -concat highres2standard.mat example_func2highres.mat
+convert_xfm -inverse -omat standard2example_func.mat example_func2standard.mat
+slices highres2standard ${rtfMRI_path}/rt-fMRI_ROIs/standard # pop up visualization for struct 2 standard registration quality 
+slices highres2standard ${rtfMRI_path}/rt-fMRI_ROIs/standard -o reg/highres2standard.gif # save image
+flirt -ref example_func -in anat_brain -out anat_brain_funcaligned -applyxfm -init highres2example_func.mat -interp trilinear
+end=$(date +%s)
+echo "done registering to standard space and making transforms; total elapsed time: $(($end-$start)) seconds"
+
+# Smoothing
+niimath func_mcf_bet -s 2.5478 -mas mask_mask func_smooth
+end=$(date +%s)
+echo "done smoothing; total elapsed time: $(($end-$start)) seconds"
+
+# Highpass filtering at 0.01 Hz
+hp_sigma=`python3 -c "print (((1/.01)/2)/$tr)"`
+niimath func_smooth -Tmean tempMean
+niimath func_smooth -bptf $hp_sigma 0 -add tempMean func_preproc
+end=$(date +%s)
+echo "done highpass filtering; total elapsed time: $(($end-$start)) seconds"
+
+# run GLM
+path=`pwd`
+sed -e "s/####TR####/${tr}/g" ${rtfMRI_path}/feat_template.fsf > temp1.fsf
+sed -e "s/####VOLUMES####/${vols_retain}/g" temp1.fsf > temp2.fsf
+sed -e "s+####PATH####+${path}+g" temp2.fsf > feat_glm.fsf
+rm -f temp1.fsf temp2.fsf
+feat feat_glm.fsf
+end=$(date +%s)
+end_mins=`python3 -c "print (($end-$start)/60 )"`
+echo "done running GLM: total elapsed time: $end_mins minutes"
+
+# Make ROIs
+flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/DAN_Schaefer/DAN -out DAN -applyxfm -init standard2example_func.mat -interp trilinear
+flirt -ref example_func -in ${rtfMRI_path}/rt-fMRI_ROIs/DMN_Schaefer/DMN -out DMN -applyxfm -init standard2example_func.mat -interp trilinear
+niimath DAN -bin DAN
+niimath DMN -bin DMN
+niimath DAN -mul Mt_GLM.feat/stats/zstat1 DAN_z
+niimath DMN -mul Mt_GLM.feat/stats/zstat1 DMN_z
+niimath DMN_z -mul -1 DMN_z #flip zstat image for negative
+# get top 200 voxels for DAN
+DAN_vol=`fslstats DAN -V`
+DAN_vol=$(echo $DAN_vol | awk '{print $1}')
+DAN_retain=`python3 -c "print (1994 / float($DAN_vol) )"`
+DAN_cutoff=`python3 -c "print (100-($DAN_retain*100) )"`
+DAN_thr=`fslstats DAN_z -P $DAN_cutoff`
+niimath DAN_z -thr $DAN_thr DAN_thr
+z_DAN=`fslstats DAN_thr -M`
+echo ${z_DAN} > mean_z_DAN.txt
+echo "mean z in thresholded DAN (top 10% voxels) is ${z_DAN}"
+niimath DAN_thr -bin DAN_ROI
+# bottom 200 voxels for DMN 
+DMN_vol=`fslstats DMN -V`
+DMN_vol=$(echo $DMN_vol | awk '{print $1}')
+DMN_retain=`python3 -c "print (3264 / float($DMN_vol) )"`
+DMN_cutoff=`python3 -c "print (100-($DMN_retain*100) )"`
+DMN_thr=`fslstats DMN_z -P $DMN_cutoff`
+niimath DMN_z -thr $DMN_thr DMN_thr
+z_DMN=`fslstats DMN_thr -M`
+echo ${z_DMN} > mean_z_DMN.txt
+echo "mean z in thresholded DMN (top 10% voxels) is -${z_DMN}"
+niimath DMN_thr -bin DMN_ROI
+niimath DAN_ROI -bin ROI_DAN -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_DAN.nii.gz
+niimath DMN_ROI -bin ROI_DMN -odt int # convert to int for OpenNFT compatibility
+gunzip ROI_DMN.nii.gz
+end=$(date +%s)
+echo "done making ROIs: total elapsed time: $end_mins minutes"
+
+# Prepare for OpenNFT
+mkdir -p OpenNFT
+mkdir -p OpenNFT/EPI_Template
+mkdir -p OpenNFT/T1
+mkdir -p OpenNFT/config
+gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
+cp example_func.nii OpenNFT/EPI_Template
+cp anat_brain_funcaligned.nii OpenNFT/T1
+cp -r ${rtfMRI_path}/Settings OpenNFT
+cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
+watchpath=`echo ${path%/*}`
+watchpath=`echo ${watchpath%/*}`
+watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
+subjectpath=`echo ${watchpath%/*}`
+subjectpath=${subjectpath}/Subjects/${sub}
+
+for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
+do
+mkdir -p OpenNFT/${run}_src
+mkdir -p OpenNFT/${run}
+rm -r -f OpenNFT/${run}/ROIs 
+mkdir -p OpenNFT/${run}/ROIs
+mkdir -p OpenNFT/Data_${run}
+# .ini file setup
+cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
+matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
+matsizey=`fslinfo ${data} | grep "^dim2" | awk '{print $2}'`
+slices=`fslinfo ${data} | grep "^dim3" | awk '{print $2}'`
+tr=`python3 -c "print (int($tr*1000))"`
+sed -e "s/####SUBNAME####/${sub}/g" OpenNFT/config/temp1.ini > OpenNFT/config/temp2.ini
+sed -e "s/####MATSIZEX####/${matsizex}/g" OpenNFT/config/temp2.ini > OpenNFT/config/temp3.ini
+sed -e "s/####MATSIZEY####/${matsizey}/g" OpenNFT/config/temp3.ini > OpenNFT/config/temp4.ini
+sed -e "s/####SLICES####/${slices}/g" OpenNFT/config/temp4.ini > OpenNFT/config/temp5.ini
+sed -e "s/####TR####/${tr}/g" OpenNFT/config/temp5.ini > OpenNFT/config/temp6.ini
+sed -e "s/####RUN####/${run}/g" OpenNFT/config/temp6.ini > OpenNFT/config/temp7.ini
+sed -e "s+####SUBJECTPATH####+${subjectpath}+g" OpenNFT/config/temp7.ini > OpenNFT/config/temp8.ini
+sed -e "s+####WATCHPATH####+${watchpath}+g" OpenNFT/config/temp8.ini > OpenNFT/config/rtfmri_es_${run}.ini
+rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini OpenNFT/config.temp8.ini
+done
+echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
+
+# Set up DAN and DMN switch as ROI on every other run
+if [ "$balance" = "1" ]; then
+	for run in Run_1 Run_3 Run_5 Run_7 Run_9
+	do
+		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
+		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
+	done
+	for run in Run_2 Run_4 Run_6 Run_8 Run_10
+	do
+		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
+		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
+	done
+fi
+if [ "$balance" = 2 ]; then
+	for run in Run_1 Run_3 Run_5 Run_7 Run_9
+	do
+		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
+		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
+	done
+	for run in Run_2 Run_4 Run_6 Run_8 Run_10
+	do
+		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
+		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
+	done
+fi
+echo "done copying ROIs to OpenNFT folder (counter-balance order: ${balance}); total elapsed time: $(($end-$start)) seconds"
+
+# organize outputs
+rm -f func_smooth.nii.gz func_trimmed.nii.gz func_mcf.nii.gz func_mcf_bet.nii.gz tempMean.nii.gz feat_glm.fsf mask_mask.nii.gz mean_func.nii.gz
+mkdir -p ROIs
+mv DAN.nii.gz DAN_ROI.nii.gz DAN_thr.nii.gz DAN_z.nii.gz mean_z_DAN.txt ROIs
+mv DMN.nii.gz DMN_ROI.nii.gz DMN_thr.nii.gz DMN_z.nii.gz mean_z_DMN.txt ROIs
+mv WM_ROI.nii.gz ROIs
+mv highres2example_func.mat highres2standard.mat highres2standard.nii.gz standard2highres.mat reg
+mv example_func2highres.mat example_func2highres.nii.gz example_func2standard.mat standard2example_func.mat reg
+
+# set up "test" folder for simulation
+mkdir -p OpenNFT/tests
+cp ${rtfMRI_path}/tests/testRTexp.py OpenNFT/tests/temp.py
+test_path=${path}/OpenNFT
+sed -e "s+####TESTPATH####+${test_path}+g" OpenNFT/tests/temp.py > OpenNFT/tests/testRTexp.py
+rm -f OpenNFT/tests/temp.py
+
+# Make plots of ROIs
+niimath Mt_GLM.feat/stats/zstat1 -mul -1 Mt_GLM.feat/stats/zstat1_negative
+fsleyes render --scene lightbox -of activation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of deactivation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1_negative -cm blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of activation_ROIs_sagittal.png -slightbox -nr 10 -nc 10 -zx X example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of deactivation_ROIs_sagittal.png -slightbox -nr 10 -nc 10 -zx X example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1_negative -cm blue-lightblue -dr 2 5 -a 25 
+open activation_ROIs_axial.png
+open deactivation_ROIs_axial.png
+open activation_ROIs_sagittal.png
+open deactivation_ROIs_sagittal.png
+
+end_mins=`python3 -c "print (($end-$start)/60 )"`
+echo "done OpenNFT setup: total elapsed time: $end_mins minutes"
