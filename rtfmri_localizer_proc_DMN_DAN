@@ -257,7 +257,6 @@ rm -f func_smooth.nii.gz func_trimmed.nii.gz func_mcf.nii.gz func_mcf_bet.nii.gz
 mkdir -p ROIs
 mv DAN.nii.gz DAN_ROI.nii.gz DAN_thr.nii.gz DAN_z.nii.gz mean_z_DAN.txt ROIs
 mv DMN.nii.gz DMN_ROI.nii.gz DMN_thr.nii.gz DMN_z.nii.gz mean_z_DMN.txt ROIs
-mv WM_ROI.nii.gz ROIs
 mv highres2example_func.mat highres2standard.mat highres2standard.nii.gz standard2highres.mat reg
 mv example_func2highres.mat example_func2highres.nii.gz example_func2standard.mat standard2example_func.mat reg
 
