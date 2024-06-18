@@ -1,6 +1,6 @@
 #! /bin/bash -f
 
-# needs 4 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok); (4) counter-balance order for ROIs (1 or 2)
+# needs 4 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
 # must run this from within a folder that contains both of these files as well as Mt_EV.txt file for gradCPT GLM
 
 # Add path to this script to .bash_profile (on Mac)
@@ -12,9 +12,9 @@ usage() {
     echo ""
 	echo "Creates ROIs for DMN and DAN based on top 10% activated and deactivated voxels, respectively"
 	echo ""
-	echo "rtfmri_localizer_proc_DMN_DAN <subject_name> <fMRI_nii_file> <anat_nii_file> <counterbalance_order>"
+	echo "rtfmri_localizer_proc_DMN_DAN <subject_name> <fMRI_nii_file> <anat_nii_file>"
 	echo ""
-	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file; (4) ROI counter-balance order for OpenNFT (1 or 2)"
+	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file"
 	echo ""
 	echo "***YOU MUST RUN THIS FROM WITHIN DIRECTORY CONTAINING INPUT FILES***"
 	echo "(and this input directory must be within Subjects/<sub> parallel to the OpenNFT watch folder)"
@@ -28,7 +28,6 @@ rtfMRI_path=`echo "${a%/*}/"`
 sub="$1"
 data="$2";
 anat="$3";
-balance="$4"
 
 if [[ $# -eq 0 ]] ; then
 	usage
@@ -47,11 +46,6 @@ fi
 
 if [ -z "$3" ]; then
   echo "No T1 data entered as input 3"
-  exit
-fi
-
-if [ -z "$4" ]; then
-  echo "No counter-balance order entered as input 4 (must enter 1 or 2)"
   exit
 fi
 
@@ -193,22 +187,25 @@ gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
 cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 cp -r ${rtfMRI_path}/Settings OpenNFT
-cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
+cp ${rtfMRI_path}/templates/puzzle_template.json OpenNFT/config/puzzle.json
 watchpath=`echo ${path%/*}`
 watchpath=`echo ${watchpath%/*}`
 watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
 subjectpath=`echo ${watchpath%/*}`
 subjectpath=${subjectpath}/Subjects/${sub}
 
-for run in Run_1 Run_2 Run_3 Run_4 Run_5 Run_6 Run_7 Run_8 Run_9 Run_10
+for run in Run_1 Run_2 Run_3 Run_4
 do
 mkdir -p OpenNFT/${run}_src
 mkdir -p OpenNFT/${run}
 rm -r -f OpenNFT/${run}/ROIs 
 mkdir -p OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/Data_${run}
+# copy ROIs
+cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
+cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
 # .ini file setup
-cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
+cp ${rtfMRI_path}/templates/puzzle_template_${run}.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
 matsizey=`fslinfo ${data} | grep "^dim2" | awk '{print $2}'`
 slices=`fslinfo ${data} | grep "^dim3" | awk '{print $2}'`
@@ -224,33 +221,6 @@ sed -e "s+####WATCHPATH####+${watchpath}+g" OpenNFT/config/temp8.ini > OpenNFT/c
 rm -f OpenNFT/config/temp1.ini OpenNFT/config/temp2.ini OpenNFT/config/temp3.ini OpenNFT/config/temp4.ini OpenNFT/config/temp5.ini OpenNFT/config/temp6.ini OpenNFT/config/temp7.ini OpenNFT/config.temp8.ini
 done
 echo "done making .ini setup files; total elapsed time: $(($end-$start)) seconds"
-
-# Set up DAN and DMN switch as ROI on every other run
-if [ "$balance" = "1" ]; then
-	for run in Run_1 Run_3 Run_5 Run_7 Run_9
-	do
-		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
-		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
-	done
-	for run in Run_2 Run_4 Run_6 Run_8 Run_10
-	do
-		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
-		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
-	done
-fi
-if [ "$balance" = 2 ]; then
-	for run in Run_1 Run_3 Run_5 Run_7 Run_9
-	do
-		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
-		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
-	done
-	for run in Run_2 Run_4 Run_6 Run_8 Run_10
-	do
-		cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
-		cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
-	done
-fi
-echo "done copying ROIs to OpenNFT folder (counter-balance order: ${balance}); total elapsed time: $(($end-$start)) seconds"
 
 # organize outputs
 rm -f func_smooth.nii.gz func_trimmed.nii.gz func_mcf.nii.gz func_mcf_bet.nii.gz tempMean.nii.gz feat_glm.fsf mask_mask.nii.gz mean_func.nii.gz
