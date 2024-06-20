@@ -1,6 +1,6 @@
 #! /bin/bash -f
 
-# needs 4 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
+# needs 3 inputs: (1) subject name (2) file name for raw fMRI data; (3) file name for raw T1 data (with or without .nii.gz/.nii suffix is ok)
 # must run this from within a folder that contains both of these files as well as Mt_EV.txt file for gradCPT GLM
 
 # Add path to this script to .bash_profile (on Mac)
@@ -14,14 +14,16 @@ usage() {
 	echo ""
 	echo "rtfmri_localizer_proc_DMN_DAN <subject_name> <fMRI_nii_file> <anat_nii_file>"
 	echo ""
-	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file"
+	echo "3 inputs required: (1) subject; (2) fMRI file; (3) T1 file"
 	echo ""
 	echo "***YOU MUST RUN THIS FROM WITHIN DIRECTORY CONTAINING INPUT FILES***"
 	echo "(and this input directory must be within Subjects/<sub> parallel to the OpenNFT watch folder)"
+	echo ""
+	echo "Required software: FSL, niimath, python"
 }
 
 # rtfMRI code path
-a=`which rtfmri_localizer_proc`
+a=`which rtfmri_localizer_proc_DMN_DAN`
 rtfMRI_path=`echo "${a%/*}/"`
 
 # Inputs
@@ -239,14 +241,8 @@ rm -f OpenNFT/tests/temp.py
 
 # Make plots of ROIs
 niimath Mt_GLM.feat/stats/zstat1 -mul -1 Mt_GLM.feat/stats/zstat1_negative
-fsleyes render --scene lightbox -of activation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25 
-fsleyes render --scene lightbox -of deactivation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1_negative -cm blue-lightblue -dr 2 5 -a 25 
-fsleyes render --scene lightbox -of activation_ROIs_sagittal.png -slightbox -nr 10 -nc 10 -zx X example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25 
-fsleyes render --scene lightbox -of deactivation_ROIs_sagittal.png -slightbox -nr 10 -nc 10 -zx X example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1_negative -cm blue-lightblue -dr 2 5 -a 25 
+fsleyes render --scene lightbox -of activation_ROIs_axial.png -slightbox -nr 6 -nc 6 -zx Z example_func ROIs/DMN_ROI -cm blue-lightblue ROIs/DAN_ROI -cm red-yellow Mt_GLM.feat/stats/zstat1 -cm red-yellow -nc blue-lightblue -dr 2 5 -a 25
 open activation_ROIs_axial.png
-open deactivation_ROIs_axial.png
-open activation_ROIs_sagittal.png
-open deactivation_ROIs_sagittal.png
 
 end_mins=`python3 -c "print (($end-$start)/60 )"`
 echo "done OpenNFT setup: total elapsed time: $end_mins minutes"
