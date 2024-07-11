@@ -198,7 +198,7 @@ gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
 cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 cp -r ${rtfMRI_path}/Settings OpenNFT
-cp ${rtfMRI_path}/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
+cp ${rtfMRI_path}/templates/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
 watchpath=`echo ${path%/*}`
 watchpath=`echo ${watchpath%/*}`
 watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
@@ -213,7 +213,7 @@ rm -r -f OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/Data_${run}
 # .ini file setup
-cp ${rtfMRI_path}/rtfmri_es_template.ini OpenNFT/config/temp1.ini
+cp ${rtfMRI_path}/templates/rtfmri_es_template_${run}.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
 matsizey=`fslinfo ${data} | grep "^dim2" | awk '{print $2}'`
 slices=`fslinfo ${data} | grep "^dim3" | awk '{print $2}'`
