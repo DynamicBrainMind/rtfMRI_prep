@@ -14,7 +14,7 @@ usage() {
 	echo ""
 	echo "rtfmri_localizer_proc_DMN_DAN <subject_name> <fMRI_nii_file> <anat_nii_file>"
 	echo ""
-	echo "3 inputs required: (1) subject; (2) fMRI file; (3) T1 file"
+	echo "4 inputs required: (1) subject; (2) fMRI file; (3) T1 file (4) ROI order for OpenNFT (1 or 2: 1 = ROI1_DMN and ROI2_DAN, 2 = ROI1_DAN and ROI2_DMN)"
 	echo ""
 	echo "***YOU MUST RUN THIS FROM WITHIN DIRECTORY CONTAINING INPUT FILES***"
 	echo "(and this input directory must be within Subjects/<sub> parallel to the OpenNFT watch folder)"
@@ -30,6 +30,7 @@ rtfMRI_path=`echo "${a%/*}/"`
 sub="$1"
 data="$2";
 anat="$3";
+balance="$4"
 
 if [[ $# -eq 0 ]] ; then
 	usage
@@ -48,6 +49,11 @@ fi
 
 if [ -z "$3" ]; then
   echo "No T1 data entered as input 3"
+  exit
+fi
+
+if [ -z "$4" ]; then
+  echo "No counter-balance order entered as input 4 (must enter 1 or 2)"
   exit
 fi
 
@@ -203,9 +209,15 @@ mkdir -p OpenNFT/${run}
 rm -r -f OpenNFT/${run}/ROIs 
 mkdir -p OpenNFT/${run}/ROIs
 mkdir -p OpenNFT/Data_${run}
-# copy ROIs
-cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
-cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
+# copy ROIs and set order depending on user selection
+if [ "$balance" = "2" ]; then
+	cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DAN.nii
+	cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
+fi
+if [ "$balance" = "1" ]; then
+	cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
+	cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
+fi
 # .ini file setup
 cp ${rtfMRI_path}/templates/puzzle_template_${run}.ini OpenNFT/config/temp1.ini
 matsizex=`fslinfo ${data} | grep "^dim1" | awk '{print $2}'`
