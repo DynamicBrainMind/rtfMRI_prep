@@ -195,7 +195,6 @@ gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
 cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 cp -r ${rtfMRI_path}/Settings OpenNFT
-cp ${rtfMRI_path}/templates/puzzle_template.json OpenNFT/config/puzzle.json
 watchpath=`echo ${path%/*}`
 watchpath=`echo ${watchpath%/*}`
 watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
@@ -204,6 +203,7 @@ subjectpath=${subjectpath}/Subjects/${sub}
 
 for run in Run_1 Run_2 Run_3 Run_4
 do
+cp ${rtfMRI_path}/templates/puzzle_es_${run}.json OpenNFT/config/puzzle_es_${run}.json
 mkdir -p OpenNFT/${run}_src
 mkdir -p OpenNFT/${run}
 rm -r -f OpenNFT/${run}/ROIs 
@@ -215,8 +215,8 @@ if [ "$balance" = "2" ]; then
 	cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DMN.nii
 fi
 if [ "$balance" = "1" ]; then
-	cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
-	cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
+	cp ROI_DMN.nii OpenNFT/${run}/ROIs/ROI1_DMN.nii
+	cp ROI_DAN.nii OpenNFT/${run}/ROIs/ROI2_DAN.nii
 fi
 # .ini file setup
 cp ${rtfMRI_path}/templates/puzzle_template_${run}.ini OpenNFT/config/temp1.ini
