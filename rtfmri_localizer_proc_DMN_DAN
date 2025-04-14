@@ -195,8 +195,9 @@ gunzip example_func.nii.gz anat_brain_funcaligned.nii.gz
 cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 cp -r ${rtfMRI_path}/Settings OpenNFT
-watchpath=`echo ${path%/*}`
-watchpath=`echo ${watchpath%/*}`
+#watchpath=`echo ${path%/*}`
+#watchpath=`echo ${watchpath%/*}`
+watchpath='/Volumes/OpenNFT_SharedFolder'
 watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
 subjectpath=`echo ${watchpath%/*}`
 subjectpath=${subjectpath}/Subjects/${sub}
