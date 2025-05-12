@@ -199,9 +199,9 @@ cp example_func.nii OpenNFT/EPI_Template
 cp anat_brain_funcaligned.nii OpenNFT/T1
 cp -r ${rtfMRI_path}/Settings OpenNFT
 cp ${rtfMRI_path}/templates/rtfmri_es_template.json OpenNFT/config/rtfmri_es.json
-#watchpath=`echo ${path%/*}`
-#watchpath=`echo ${watchpath%/*}`
-watchpath='/Volumes/OpenNFT_SharedFolder'
+watchpath=`echo ${path%/*}`
+watchpath=`echo ${watchpath%/*}`
+#watchpath='/Volumes/OpenNFT_SharedFolder'
 watchpath=`find ${watchpath} -name "20*" -maxdepth 1`
 subjectpath=`echo ${watchpath%/*}`
 subjectpath=${subjectpath}/Subjects/${sub}
