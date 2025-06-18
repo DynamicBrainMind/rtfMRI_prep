@@ -6,14 +6,15 @@
 
 		"ConditionName": "NFBREG",
 		"OnOffsets": [
-			[11,265], 
+			[11,265],
+			[268,269] 
 		]
 	},
 	{
 
 		"ConditionName": "TASK",
 		"OnOffsets": [
-			[266,269],
+			[266,267],
 
 		]
 	}
